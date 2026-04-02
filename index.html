@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa de Linhas Interativo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #000;
+      color: #fff;
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ─── Sidebar ─── */
+    aside {
+      width: 220px;
+      min-width: 220px;
+      background: #050505;
+      border-right: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sb-head {
+      padding: 28px 20px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .sb-head .eyebrow {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.22);
+      margin-bottom: 6px;
+    }
+    .sb-head .title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: rgba(255,255,255,0.92);
+      line-height: 1.15;
+    }
+    .sb-head .subtitle {
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 300;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.01em;
+    }
+
+    .sb-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px 16px;
+      scrollbar-width: thin;
+      scrollbar-color: #1c1c1c transparent;
+    }
+    .sb-list::-webkit-scrollbar { width: 3px; }
+    .sb-list::-webkit-scrollbar-thumb { background: #1c1c1c; border-radius: 2px; }
+
+    .sb-sep {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+      margin: 8px 4px 10px;
+    }
+
+    .btn {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 8px 10px 8px 14px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 11.5px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.35);
+      text-align: left;
+      letter-spacing: 0.005em;
+      transition: background 0.14s, color 0.14s, border-color 0.14s;
+      margin-bottom: 2px;
+      overflow: hidden;
+    }
+    .btn::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 7px;
+      bottom: 7px;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: var(--ac, transparent);
+      opacity: 0;
+      transition: opacity 0.16s;
+    }
+    .btn:hover {
+      background: rgba(255,255,255,0.03);
+      color: rgba(255,255,255,0.65);
+    }
+    .btn.on {
+      background: rgba(255,255,255,0.045);
+      border-color: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.93);
+      font-weight: 500;
+    }
+    .btn.on::before { opacity: 1; }
+    .btn.on .tag { color: rgba(255,255,255,0.28); }
+
+    .dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-all {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.28);
+      flex-shrink: 0;
+    }
+    .lbl { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tag {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: rgba(255,255,255,0.11);
+      flex-shrink: 0;
+    }
+
+    .sb-foot {
+      padding: 12px 20px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      font-size: 9px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.12);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    /* ─── Map ─── */
+    main {
+      flex: 1;
+      overflow: hidden;
+      background: #000;
+      position: relative;
+    }
+    #sv { width: 100%; height: 100%; display: block; }
+
+    .lg { transition: opacity 0.28s ease; }
+    .tn { transition: opacity 0.28s ease; }
+  </style>
+</head>
+<body>
+
+<aside id="aside">
+  <div class="sb-head">
+    <div class="eyebrow">Mapa Interativo</div>
+    <div class="title">Linhas</div>
+    <div class="subtitle">Clique para filtrar</div>
+  </div>
+  <div class="sb-list" id="sb-list">
+    <button class="btn on" data-id="all">
+      <span class="dot-all"></span>
+      <span class="lbl">Todas as linhas</span>
+    </button>
+    <div class="sb-sep"></div>
+  </div>
+  <div class="sb-foot">© Mapa de Linhas</div>
+</aside>
+
+<main>
+  <svg id="sv" viewBox="0 0 1380 860" preserveAspectRatio="xMidYMid meet"
+       xmlns="http://www.w3.org/2000/svg">
+    <rect width="1380" height="860" fill="#000"/>
+
+    <!-- subtle grid reference -->
+    <g stroke="#ffffff" stroke-width="0.5" opacity="0.022">
+      <line x1="0" y1="215" x2="1380" y2="215"/>
+      <line x1="0" y1="430" x2="1380" y2="430"/>
+      <line x1="0" y1="645" x2="1380" y2="645"/>
+      <line x1="345" y1="0" x2="345" y2="860"/>
+      <line x1="690" y1="0" x2="690" y2="860"/>
+      <line x1="1035" y1="0" x2="1035" y2="860"/>
+    </g>
+
+    <g id="ll"></g>
+    <g id="ls"></g>
+    <g id="lt"></g>
+  </svg>
+</main>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   10 LINES — waypoints carefully designed so that every
+   transfer node is an EXACT shared waypoint.
+   No geometric intersection detection — circles only appear
+   where lines genuinely share a coordinate point.
+
+   Shared junction map:
+   [108,415]  → L1, L2, L4          (Hub A – western terminus)
+   [185,358]  → L2, L4, L9          (Hub B – mid-west)
+   [440,238]  → L2, L3              (Upper crossover)
+   [700,155]  → L2, L6              (North center)
+   [740,192]  → L3, L6              (Upper center-right)
+   [700,440]  → L4, L6              (Center junction)
+   [700,502]  → L5, L6, L8, L10    (Hub C – main center)
+   [480,502]  → L5, L7              (Mid-west center)
+   [602,502]  → L5, L7              (Center-west)
+   [820,458]  → L5, L10             (Center-right)
+   [1208,318] → L4, L10             (East junction)
+═══════════════════════════════════════════════════════════ */
+const LINES = [
+
+  /* L01 · Jornalismo – left N-S spine */
+  { id:1, name:'Jornalismo',         c:'#F03018',
+    pts:[[68,42],[68,98],[108,138],[108,215],
+         [68,255],[68,332],[108,372],[108,415],
+         [108,455],[68,498],[68,568],[108,605],
+         [108,672],[68,714],[68,788],[68,848]] },
+
+  /* L02 · Esportes – long diagonal NE → Hub A */
+  { id:2, name:'Esportes',           c:'#1FB25A',
+    pts:[[1342,52],[1210,52],[1082,88],[958,118],
+         [835,148],[700,155],[578,192],[440,238],
+         [290,302],[185,358],[108,415]] },
+
+  /* L03 · Entretenimento – E-W upper corridor
+     passes through [440,238] (L2) and [740,192] (L6) */
+  { id:3, name:'Entretenimento',     c:'#FF8533',
+    pts:[[68,192],[188,192],[288,232],[440,238],
+         [522,192],[648,192],[740,192],[768,232],
+         [888,232],[958,198],[1082,198],[1208,232],[1342,192]] },
+
+  /* L04 · Economia – diagonal NE → Hub A
+     shares [185,358] with L2/L9 and [1208,318] with L10 */
+  { id:4, name:'Economia',           c:'#338585',
+    pts:[[1342,318],[1208,318],[1082,358],[958,398],
+         [840,398],[700,440],[578,440],[440,398],
+         [290,358],[185,358],[108,415]] },
+
+  /* L05 · Saúde & Bem Estar – E-W mid horizontal
+     [480,502] and [602,502] shared w/ L7
+     [700,502] shared w/ L6/L8/L10
+     [820,458] shared w/ L10 */
+  { id:5, name:'Saúde & Bem Estar',  c:'#3EAEC4',
+    pts:[[68,502],[155,502],[240,462],[358,462],
+         [480,502],[602,502],[700,502],[820,458],
+         [920,462],[1042,502],[1165,502],[1288,462],[1342,462]] },
+
+  /* L06 · Realities – N-S center spine
+     [700,155] w/ L2, [740,192] w/ L3,
+     [700,440] w/ L4, [700,502] w/ L5/L8/L10 */
+  { id:6, name:'Realities',          c:'#7334C2',
+    pts:[[700,42],[700,155],[740,192],[740,318],
+         [700,358],[700,440],[700,502],[740,542],
+         [740,638],[700,678],[700,775],[658,815]] },
+
+  /* L07 · Receitas – lower diagonal right → left
+     [602,502] and [480,502] shared w/ L5 */
+  { id:7, name:'Receitas',           c:'#B74397',
+    pts:[[1342,602],[1200,558],[1078,518],[958,478],
+         [838,498],[715,540],[602,502],[480,502],
+         [358,502],[240,542],[108,578]] },
+
+  /* L08 · Tecnologia e Games – NW-SE diagonal
+     [700,502] shared w/ L5/L6/L10 */
+  { id:8, name:'Tecnologia e Games', c:'#2ECBB0',
+    pts:[[1342,782],[1175,718],[1055,658],[935,598],
+         [820,558],[700,502],[595,442],[480,382],
+         [358,342],[240,298],[155,258],[68,222]] },
+
+  /* L09 · GloboPlay – arc W through mid → SE
+     [185,358] shared w/ L2/L4 */
+  { id:9, name:'GloboPlay',          c:'#FC355D',
+    pts:[[68,358],[185,358],[272,318],[402,318],
+         [522,358],[645,398],[768,440],[882,478],
+         [1002,518],[1125,558],[1248,612],[1342,678]] },
+
+  /* L10 · GloboPop – S-curve SW → NE
+     [700,502] w/ L5/L6/L8, [820,458] w/ L5, [1208,318] w/ L4 */
+  { id:10, name:'GloboPop',          c:'#F825FE',
+    pts:[[68,758],[198,718],[300,678],[420,678],
+         [522,638],[645,578],[700,502],[820,458],
+         [942,418],[1065,378],[1208,318],[1342,298]] }
+];
+
+/* ════════════════ SVG helpers ════════════════ */
+const NS = 'http://www.w3.org/2000/svg';
+const sv = document.getElementById('sv');
+const ll = document.getElementById('ll');
+const ls = document.getElementById('ls');
+const lt = document.getElementById('lt');
+
+const mk = (tag, attrs, par) => {
+  const e = document.createElementNS(NS, tag);
+  for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+  if (par) par.appendChild(e);
+  return e;
+};
+
+/* Transfer nodes = ONLY exact shared waypoints.
+   No geometric math — circles are always on a real station. */
+function buildTransfers() {
+  const wmap = {};
+  for (const L of LINES)
+    for (const [x,y] of L.pts) {
+      const k = `${x},${y}`;
+      if (!wmap[k]) wmap[k] = { x, y, ids: new Set() };
+      wmap[k].ids.add(L.id);
+    }
+  return Object.values(wmap)
+    .filter(t => t.ids.size > 1)
+    .map(t => ({ x:t.x, y:t.y, ids:t.ids }));
+}
+
+/* ════════════════ Render lines ════════════════ */
+const lgMap = {}, sgMap = {};
+const transfers = buildTransfers();
+const tCoords = new Set(transfers.map(t => `${t.x},${t.y}`));
+
+for (const L of LINES) {
+  const lg = mk('g', { 'data-lid':L.id, class:'lg' }, ll);
+
+  /* black casing for clarity at crossings */
+  mk('polyline', {
+    points: L.pts.map(p=>p.join(',')).join(' '),
+    fill:'none', stroke:'#000',
+    'stroke-width':9, 'stroke-linecap':'round', 'stroke-linejoin':'round'
+  }, lg);
+
+  /* coloured line */
+  mk('polyline', {
+    points: L.pts.map(p=>p.join(',')).join(' '),
+    fill:'none', stroke:L.c, class:'cline',
+    'stroke-width':7, 'stroke-linecap':'round', 'stroke-linejoin':'round'
+  }, lg);
+
+  lgMap[L.id] = lg;
+
+  /* regular station dots (skip transfer coords) */
+  const sg = mk('g', { 'data-sid':L.id, class:'lg' }, ls);
+  const seen = new Set();
+  for (const [x,y] of L.pts) {
+    const k = `${x},${y}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    if (tCoords.has(k)) continue;
+    mk('circle', { cx:x, cy:y, r:3.8, fill:'#fff' }, sg);
+  }
+  sgMap[L.id] = sg;
+}
+
+/* ════════════════ Render transfer nodes ════════════════ */
+const tNodes = [];
+for (const t of transfers) {
+  const g = mk('g', { class:'tn', 'data-nids':[...t.ids].join(',') }, lt);
+  mk('circle', { cx:t.x, cy:t.y, r:9,   fill:'#fff' }, g);
+  mk('circle', { cx:t.x, cy:t.y, r:6,   fill:'#000' }, g);
+  tNodes.push({ g, ids:t.ids });
+}
+
+/* ════════════════ Sidebar buttons ════════════════ */
+const sbl = document.getElementById('sb-list');
+
+LINES.forEach(l => {
+  const b = document.createElement('button');
+  b.className = 'btn';
+  b.dataset.id = l.id;
+  b.style.setProperty('--ac', l.c);
+  b.innerHTML =
+    `<span class="dot" style="background:${l.c}"></span>` +
+    `<span class="lbl">${l.name}</span>` +
+    `<span class="tag">L${String(l.id).padStart(2,'0')}</span>`;
+  sbl.appendChild(b);
+});
+
+/* ════════════════ State & interaction ════════════════ */
+let active = 'all';
+
+function render() {
+  /* sidebar */
+  sbl.querySelectorAll('.btn').forEach(b =>
+    b.classList.toggle('on', b.dataset.id === String(active))
+  );
+
+  /* lines + station dots */
+  document.querySelectorAll('.lg').forEach(g => {
+    const lid = parseInt(g.dataset.lid || g.dataset.sid);
+    const show = active === 'all' || lid === active;
+    g.style.opacity = show ? '1' : '0.03';
+    g.querySelectorAll('.cline').forEach(pl =>
+      pl.setAttribute('stroke-width', (show && active !== 'all') ? '9' : '7')
+    );
+  });
+
+  /* transfer markers */
+  tNodes.forEach(({ g, ids }) => {
+    g.style.opacity = (active === 'all' || ids.has(+active)) ? '1' : '0.04';
+  });
+}
+
+document.getElementById('aside').addEventListener('click', e => {
+  const b = e.target.closest('.btn');
+  if (!b) return;
+  const id = b.dataset.id === 'all' ? 'all' : parseInt(b.dataset.id);
+  /* toggle off if already active, otherwise select */
+  active = (id !== 'all' && id === active) ? 'all' : id;
+  render();
+});
+</script>
+</body>
+</html>
